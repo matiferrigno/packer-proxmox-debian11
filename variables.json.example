@@ -1,0 +1,6 @@
+{
+    "proxmox_host": "<host>:8006",
+    "proxmox_node": "<node>",
+    "proxmox_api_user": "<user>",
+    "proxmox_api_password": "<api_password>"
+}
