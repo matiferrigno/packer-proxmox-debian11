@@ -1,0 +1,4 @@
+proxmox_host = "proxmox.local:8006"
+proxmox_node = "proxmox"
+proxmox_api_user = "packer-prov@pve"
+proxmox_api_password = "changeme!"

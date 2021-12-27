@@ -1,6 +1,8 @@
 # The top level settings are used as module
 # and system configuration.
 
+timezone: "${timezone}"
+
 # Update the contents of /etc/hosts. This will use the name you
 # specified when creating the VM in proxmox
 manage_etc_hosts: true
@@ -21,39 +23,30 @@ chpasswd:
   root:RANDOM
 
 # Update apt database on first boot (run 'apt-get update')
-apt_update: true
+package_update: true
 
 # Upgrade the instance on first boot
-apt_upgrade: true
-
-# Reboot after package install/update if necessary
-apt_reboot_if_required: true
+package_upgrade: true
 
 # Install useful packages
+package_upgrade: true
 packages:
  - vim
+ - curl
+ - gpg
+ - wget
  - git
  - htop
  - ufw
+ - fail2ban
  - build-essential
- - zfsutils-linux
-
-# Run some commands
-runcmd:
-  - [ timedatectl, set-timezone, America/Argentina/Buenos_Aires ]
-  - [ timedatectl, set-ntp, true ]
-  - ufw default deny incoming
-  - ufw default allow outgoing
-  - ufw limit 2224
-  - ufw allow in 2224
-  - echo "y" | ufw enable
 
 # Write out new SSH daemon configuration. Standard debian 10 configuration
 # apart from forbidding root login and disabling password authentication
 write_files:
  - path: /etc/ssh/sshd_config
    content: |
-      Port 2224
+      Port 2222
       PermitRootLogin no
       PubkeyAuthentication yes
       PasswordAuthentication no
@@ -65,7 +58,7 @@ write_files:
       PrintMotd no
       AcceptEnv LANG LC_*
       Subsystem	sftp	/usr/lib/openssh/sftp-server
-      AllowUsers matias
+      Include /etc/ssh/sshd_config.d/*.conf
 
 # The modules that run in the 'init' stage
 cloud_init_modules:
@@ -83,6 +76,7 @@ cloud_config_modules:
  - set-passwords
  - ntp
  - timezone
+ - runcmd
  - disable-ec2-metadata
 
 # The modules that run in the 'final' stage
@@ -103,14 +97,14 @@ system_info:
    distro: debian
    # Default user name + that default users groups (if added/used)
    default_user:
-     name: matias
+     name: debian
      lock_passwd: True
      gecos: Debian
      groups: [adm, audio, cdrom, dialout, dip, floppy, netdev, plugdev, sudo, video]
      sudo: ["ALL=(ALL) NOPASSWD:ALL"]
      shell: /bin/bash
      ssh_authorized_keys:
-       - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDRvPrOkNMLPBT8KZWPyXX+VwF+y4yaA3xgzFFOoMx2KhLdMwQhMd7Irg96hqc8rKYvFpiPM7MhTSZtH83KlAA9di1kHgxi/X7qTJI447kVtsEiWpiipF6Ffu6Ej8D6GXGe4vz019WsATVcle8pWVeOw+ztFGkLgSwLEuskWPvPOmZrS4WfivyeCfChXHhDvdsxZ0bHzKWMlk2S/Xb9w8GrOrhvM7uTt7tZj4ln20XFVDfK/XBRH2tk2OfROT0aHVV5moohe5Go5gxGE+UrnTTD0a3/Am3jfOc1jqEBg8WB4tpjAQ74avJm5fSYOYUzq4ZyVpCgm/hRyiynYQDgb/QeuqUEElmqxCZmMas6PVNUa9fTksI2Ta0x05CBRc1iuYqUY8PQem+JC/HBYexFIg/sQ+xa8F19Y4W8NKGQvhal8/tfjFY1IuBy0ezMBO2vmQsd5c5UujKjE023JVOumSwiWDLCOy45cE4644Hs7sy23pM1PKs7wkHdsfd17Im4mJPNvePUfANpfKBkt7op5pBHACn+69xiLr1IBDQ04o93B2nEAEsKudY89QBjYrj31HELjx8bNL5qDnJiVZhc/TqzOgg67VulxhJultwCNqimZ/IsI7NOVyomn7lIYBgUJy4dM0ipYnKkUfqhhhR49PyNlsvFtB2SC6JiU0lOcUIuow== mati@centuripe
+       - "${ssh_key}"
    paths:
       cloud_dir: /var/lib/cloud/
       templates_dir: /etc/cloud/templates/
@@ -118,6 +112,12 @@ system_info:
    package_mirrors:
      - arches: [default]
        failsafe:
-         primary: http://debian.unnoba.edu.ar/debian
-         security: http://security.debian.org/debian-security
+         primary: "http://${mirror}/debian"
+         security: "http://security.debian.org/debian-security"
    ssh_svcname: ssh
+
+runcmd:
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw limit 2222/tcp
+  - echo "y" | ufw enable
